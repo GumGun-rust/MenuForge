@@ -6,24 +6,29 @@ use std::time::Duration;
 use std::io::Write;
 use std::io::stdout;
 
-use crossterm::execute; 
-use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
-use crossterm::terminal::ScrollUp;
 use crossterm::queue; 
-use crossterm::style::Print;
-use crossterm::cursor::MoveTo;
-
-
-use crossterm::terminal::enable_raw_mode;
-use crossterm::terminal::disable_raw_mode;
+use crossterm::execute; 
+use crossterm::event;
 use crossterm::event::read;
 use crossterm::event::poll;
-use crossterm::event;
+use crossterm::style::Print;
+use crossterm::cursor::MoveTo;
+use crossterm::cursor::position;
+use crossterm::terminal::ScrollUp;
+use crossterm::terminal::enable_raw_mode;
+use crossterm::terminal::disable_raw_mode;
+use crossterm::terminal::window_size;
+//use crossterm::terminal::{EnterAlternateScreen, LeaveAlternateScreen};
+use mint::Point2;
+
+use derivative::Derivative;
 
 mod raw;
 //Am I over engineering?
 
-type SelInputFunction<Type, RetOk, RetErr> = fn(&mut Type, &mut usize)->Result<RetOk, SelErr<RetErr>>;
+
+//recomended to only modify the index field
+type SelInputFunction<Type, RetOk, RetErr> = fn(&mut Type, &mut Fields)->Result<RetOk, SelErr<RetErr>>;
 
 pub enum SelOk {
     Ok,
@@ -43,6 +48,7 @@ pub enum SelResult<RetOk, RetErr> {
 
 //Options cant be updated in real time functions will block until the menu is completely clossed
 //TODO: prompt in this should take a ref not a refmut
+//
 pub struct Select<Type> {
     configs: Configs,
     keys: Keys<Type, SelOk, ()>,
@@ -59,14 +65,27 @@ pub struct SelectNonBlock<Type, RetOk, RetErr> {
 #[derive(Default)]
 struct RawSelect<Type, RetOk, RetErr> {
     configs: RawConfigs,
-    index: usize,
+    fields: Fields,
     pd_0: PhantomData<Type>,
     pd_1: PhantomData<RetOk>,
     pd_2: PhantomData<RetErr>,
 }
 
+#[derive(Derivative, Debug)]
+#[derivative(Default)]
+struct Fields {
+    index: usize,
+    #[derivative(Default(value="Point2{x:0,y:0}"))]
+    window_measures: Point2<u16>,
+    #[derivative(Default(value="Point2{x:0,y:0}"))]
+    init_measures: Point2<u16>,
+}
+
+#[derive(Derivative)]
+#[derivative(Default)]
 pub struct Keys<Type, RetOk, RetErr> {
-    keys: HashMap<event::Event,SelInputFunction<Type, RetOk, RetErr>>,
+    #[derivative(Default(bound=""))]
+    keys: HashMap<event::Event, SelInputFunction<Type, RetOk, RetErr>>,
 }
 
 #[derive(Default)]
@@ -76,6 +95,7 @@ pub struct Configs {
 
 #[derive(Default)]
 struct RawConfigs {
+    
     //exit_on_new_key:bool,
     //new_options:bool,
 }
@@ -85,7 +105,7 @@ impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
     pub fn new(configs: RawConfigs) -> Self {
         Self{
             configs,
-            index:0,
+            fields:Fields::default(),
             pd_0:PhantomData,
             pd_1:PhantomData,
             pd_2:PhantomData,
@@ -93,9 +113,30 @@ impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
     }
     
     pub fn init_prompt(&mut self) -> Result<(), IOError> {
-        enable_raw_mode();
+        enable_raw_mode()?;
+        let Self{
+            configs,
+            fields,
+            ..
+        } = self;
         
-        execute!(stdout(), ScrollUp(4))
+        let Fields{
+            window_measures,
+            init_measures,
+            ..
+        } = fields;
+        
+        let (pos_x, pos_y) = position()?;
+        let window = window_size()?;
+        
+        *init_measures = Point2{x:pos_x, y:pos_y};
+        *window_measures = Point2{x:window.columns, y:window.rows};
+        
+        println!("{:?} {:?}", init_measures, window_measures);
+        let move_amt = window_measures.y - init_measures.y - 1 + 10;
+        
+        
+        execute!(stdout(), ScrollUp(move_amt))
     }
     
     pub fn poll(&self) -> Result<bool, IOError> {
@@ -109,7 +150,7 @@ impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
         };
         match keys.keys.get(&key) {
             Some(action) => {
-                match action(&mut list[0], &mut self.index) {
+                match action(&mut list[0], &mut self.fields) {
                     Ok(ok) => {SelResult::Ok(ok)}
                     Err(_) => {
                         todo!("action returned error");
@@ -120,28 +161,20 @@ impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
     }
     
     pub fn end_prompt(&mut self) -> Result<(), IOError> {
-        execute!(stdout());
+        //execute!(stdout());
         disable_raw_mode()
     }
     
     pub fn test_println(&mut self) {
         queue!(
             stdout(), 
-            MoveTo(0, 0),
+            //MoveTo(0, 0),
             Print("hola"),
         );
         
         stdout().flush();
     }
 
-}
-
-impl<Type, RetOk, RetErr> Default for Keys<Type, RetOk, RetErr> {
-    fn default() -> Self {
-        Self{
-            keys:HashMap::new()
-        }
-    }
 }
 
 impl<Type> Keys<Type, SelOk, ()> {
@@ -168,17 +201,17 @@ impl<Type> Keys<Type, SelOk, ()> {
         keys
     }
     
-    fn exit(_:&mut Type, _:&mut usize) -> Result<SelOk, SelErr<()>> {
+    fn exit(_:&mut Type, _:&mut Fields) -> Result<SelOk, SelErr<()>> {
         Ok(SelOk::Exit)
     }
     
-    fn move_cursor_down(_:&mut Type, index:&mut usize) -> Result<SelOk, SelErr<()>> {
-        *index += 1;
+    fn move_cursor_down(_:&mut Type, fields:&mut Fields) -> Result<SelOk, SelErr<()>> {
+        fields.index += 1;
         Ok(SelOk::Ok)
     }
     
-    fn move_cursor_up(_:&mut Type, index:&mut usize) -> Result<SelOk, SelErr<()>> {
-        *index -= 1;
+    fn move_cursor_up(_:&mut Type, fields:&mut Fields) -> Result<SelOk, SelErr<()>> {
+        fields.index -= 1;
         Ok(SelOk::Ok)
     }
 }
@@ -222,7 +255,7 @@ impl<T> Select<T> {
             }
         }
         self.inner.end_prompt()?;
-        Ok(self.inner.index)
+        Ok(self.inner.fields.index)
     }
     
     pub fn gen_default_keys() -> Keys<T, SelOk, ()> {
