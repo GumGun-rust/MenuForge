@@ -3,7 +3,11 @@ name = "menuforge"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+unicode = []
+
 [dependencies]
+const_format = "0.2.34"
 crossterm = "0.28.1"
 derivative = "2.2.0"
 mint = "0.5.9"

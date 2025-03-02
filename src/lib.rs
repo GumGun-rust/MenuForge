@@ -1,4 +1,5 @@
 mod select;
+mod compat;
 
 pub use select::Select;
 pub use select::Keys;
