@@ -1,13 +1,15 @@
 mod select;
 mod compat;
+mod keys;
 
 pub use select::Select;
 pub use select::SelectNonBlock;
 pub use select::RawSelect;
-pub use select::Keys;
+pub use select::KeysMut;
 pub use select::Configs as SelConfigs;
 
-pub fn add(left: u64, right: u64) -> u64 {
+/*
+fn add(left: u64, right: u64) -> u64 {
     left + right
 }
 
@@ -21,3 +23,4 @@ mod tests {
         assert_eq!(result, 4);
     }
 }
+*/
