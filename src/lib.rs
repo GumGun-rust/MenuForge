@@ -2,6 +2,8 @@ mod select;
 mod compat;
 
 pub use select::Select;
+pub use select::SelectNonBlock;
+pub use select::RawSelect;
 pub use select::Keys;
 pub use select::Configs as SelConfigs;
 
