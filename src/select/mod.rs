@@ -6,7 +6,6 @@ use std::io::Write;
 use std::io::stdout;
 
 use crossterm::queue; 
-use crossterm::execute; 
 use crossterm::event::read;
 use crossterm::event::poll;
 use crossterm::cursor::position;
@@ -28,13 +27,15 @@ use derivative::Derivative;
 
 use super::compat::symbols;
 
-mod select;
-pub use select::Select;
-
 mod keys;
 pub use keys::KeysMut;
 pub use keys::Keys;
 
+mod select;
+pub use select::Select;
+
+mod non_block;
+pub use non_block::SelectNonBlock;
 
 const QUEUE_ERR:&'static str = "error in while setting stdout queue";
 const PRINTLINE_ERR:&'static str = "error in while flushing";
@@ -60,12 +61,6 @@ pub enum SelResult<RetOk, RetErr> {
     KeyNotFound,
 }
 
-//For now this cant be updated in real time
-pub struct SelectNonBlock<Type, RetOk, RetErr> {
-    pub owner: Vec<Type>,
-    pub keys: KeysMut<Type, RetOk, RetErr>,
-    pub inner: RawSelect<Type, RetOk, RetErr>,
-}
 
 #[derive(Derivative, Debug)]
 #[derivative(Default)]
@@ -140,14 +135,19 @@ impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
         let space_left = window_measures.y - pos_y -1;
         if space_left < table_size {
             let amount = table_size - space_left - 1;
-            execute!(stdout(), 
+            queue!(
+                stdout(), 
                 ScrollUp(amount),
                 MoveToPreviousLine(amount),
-                Hide
             )?;
             pos_y -= amount;
             *bottom = true;
         } 
+        queue!(
+            stdout(), 
+            Hide
+        )?;
+        stdout().flush()?;
         
         *init_position = Point2{x:pos_x, y:pos_y};
         Ok(())
@@ -175,9 +175,7 @@ impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
             Some(action) => {
                 match action(&mut list[*index], len, &mut self.fields) {
                     Ok(ok) => {SelResult::Ok(ok)}
-                    Err(_) => {
-                        todo!("action returned error");
-                    }
+                    Err(err) => {SelResult::Err(err)}
                 }
             }
             None => {SelResult::KeyNotFound} }
@@ -200,22 +198,25 @@ impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
             Some(action) => {
                 match action(&list[*index], len, &mut self.fields) {
                     Ok(ok) => {SelResult::Ok(ok)}
-                    Err(_) => {
-                        todo!("action returned error");
-                    }
+                    Err(err) => {SelResult::Err(err)}
                 }
             }
-            None => {SelResult::KeyNotFound} }
+            None => {SelResult::KeyNotFound} 
+        }
     }
     
     pub fn end_prompt(&mut self) -> Result<(), IOError> {
         if self.fields.bottom {
-            execute!(
+            queue!(
                 stdout(),
-                Show,
                 ScrollUp(1),
             )?;
-        }
+        } 
+        queue!(
+            stdout(),
+            Show,
+        )?;
+        stdout().flush()?;
         disable_raw_mode()
     }
     
@@ -239,7 +240,6 @@ impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
             stdout(), 
             MoveTo(init_position.x, init_position.y),
         )?;
-        
         for line in 0..table_size{
             queue!(
                 stdout(), 
@@ -253,5 +253,5 @@ impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
         }
         stdout().flush()
     }
-
 }
+

@@ -24,8 +24,6 @@ use crossterm::terminal::ClearType;
 use const_format::formatcp;
 
 //Options cant be updated in real time functions will block until the menu is completely clossed
-//TODO: prompt in this should take a ref not a refmut
-//
 pub struct Select<Type> {
     configs: Configs,
     keys: Keys<Type, SelOk, ()>,
@@ -35,10 +33,10 @@ pub struct Select<Type> {
 
 impl<T:std::fmt::Display> Select<T> {
     
-    pub fn new(keys: Keys<T, SelOk, ()>, configs:Configs) -> Self {
+    pub fn new(keys: Keys<T, SelOk, ()>, configs:Configs, table_size:u16) -> Self {
         
         let mut config_holder = RawConfigs::default();
-        config_holder.table_size = 9;
+        config_holder.table_size = table_size;
         
         Self{
             configs,
