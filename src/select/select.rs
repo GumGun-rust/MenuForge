@@ -82,8 +82,9 @@ impl<T:std::fmt::Display> Select<T> {
     
     fn print_func(line:u16, menu_size:u16, index:usize, entries:&[T]) -> Result<(), IOError> {
         let half = menu_size/2/*+menu_size%2*/;
+        let pair_offset:usize = if menu_size%2==0 {1} else {0};
+        let pair_complements:usize = if menu_size%2==0 {0} else {1};
         let current_index;
-        //index+usize::try_from(line).unwrap()
         let position_from_last = entries.len() - index ;
         
         if index < half.into() || entries.len() < (menu_size as usize) {
@@ -98,14 +99,13 @@ impl<T:std::fmt::Display> Select<T> {
                 }
             }
             
-        } else if position_from_last <= half.into() {
-            /* when cursor is at the bottom 
-             * */
+        } else if position_from_last+pair_offset <= half.into() {
+            /* when cursor is at the bottom */
             current_index = entries.len() - menu_size as usize + line as usize;
             if line == menu_size - position_from_last as u16 {
                 Self::selected_line().expect(QUEUE_ERR);
             } else {
-                if line == 0 {
+                if line == 0 && entries.len() > menu_size.into() {
                     Self::top_line().expect(QUEUE_ERR);
                 } else {
                     Self::empty_line().expect(QUEUE_ERR);
@@ -119,7 +119,8 @@ impl<T:std::fmt::Display> Select<T> {
             } else {
                 if line == 0 && index > half.into() {
                     Self::top_line().expect(QUEUE_ERR);
-                } else if line == menu_size - 1 && position_from_last - 1 > half.into() {
+                } else if line == menu_size - 1 && position_from_last - pair_complements > half.into() {
+                    //sometimes in a small menu the the thing at the bottom does not work
                     Self::bottom_line().expect(QUEUE_ERR);
                 } else {
                     Self::empty_line().expect(QUEUE_ERR);
