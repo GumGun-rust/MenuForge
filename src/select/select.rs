@@ -23,33 +23,52 @@ use crossterm::terminal::ClearType;
 
 use const_format::formatcp;
 
+pub type SelectContext<'a> = (usize, &'a mut usize);
+
 //Options cant be updated in real time functions will block until the menu is completely clossed
-pub struct Select<Type> {
+pub struct Select<'a, Type> {
+    holder: usize,
+    holder2: usize,
     configs: Configs,
-    keys: Keys<Type, SelOk, ()>,
-    inner: RawSelect<Type, SelOk,()>,
+    keys: Keys<Type, (usize, &'a mut usize), SelOk, ()>,
+    inner: RawSelect<Type, (usize, &'a mut usize), SelOk, ()>,
 }
 
 
-impl<T:std::fmt::Display> Select<T> {
+
+impl<'a, T:std::fmt::Display> Select<'a, T> {
     
-    pub fn new(keys: Keys<T, SelOk, ()>, configs:Configs, table_size:u16) -> Self {
+    pub fn new(keys: Keys<T, SelectContext<'a>, SelOk, ()>, configs:Configs, table_size:u16) -> Self {
         
         let mut config_holder = RawConfigs::default();
         config_holder.table_size = table_size;
         
         Self{
+            holder: 12,
+            holder2: 12,
             configs,
             keys, 
-            inner:RawSelect::<T, SelOk, ()>::new(config_holder)
+            inner:RawSelect::<T, SelectContext<'a>, SelOk, ()>::new(config_holder)
         }
     }
     
-    pub fn prompt(&mut self, list:&[T]) -> Result<Option<usize>, IOError> {
+    pub fn prompt(&'a mut self, list:&[T]) -> Result<Option<usize>, IOError> {
         self.inner.init_prompt()?;
         self.inner.print_line(list, Self::print_func)?;
+        
+        let holder = &mut self.holder;
+        let holder2 = &mut self.holder2;
+        
+        
+        match self.inner.raw_prompt(&self.keys, list, (0, holder), holder2) {
+            _ => {
+                
+            }
+        }
+        
+        /*
         let ret = loop{
-            match self.inner.raw_prompt(&self.keys, list) {
+            match self.inner.raw_prompt(&self.keys, list, (0, &mut self.holder)) {
                 SelResult::Ok(ok) => {
                     match ok {
                         SelOk::Ok => {
@@ -75,6 +94,8 @@ impl<T:std::fmt::Display> Select<T> {
         };
         self.inner.end_prompt()?;
         Ok(ret)
+        */
+        todo!("pn");
     }
     
     const UP_ARROW:&'static str = formatcp!(" {} ", symbols::UP_ARROW);
@@ -120,7 +141,6 @@ impl<T:std::fmt::Display> Select<T> {
                 if line == 0 && index > half.into() {
                     Self::top_line().expect(QUEUE_ERR);
                 } else if line == menu_size - 1 && position_from_last - pair_complements > half.into() {
-                    //sometimes in a small menu the the thing at the bottom does not work
                     Self::bottom_line().expect(QUEUE_ERR);
                 } else {
                     Self::empty_line().expect(QUEUE_ERR);
@@ -173,8 +193,8 @@ impl<T:std::fmt::Display> Select<T> {
         )
     }
     
-    pub fn gen_default_keys() -> Keys<T, SelOk, ()> {
-        Keys::<T, SelOk, ()>::default_keys()
+    pub fn gen_default_keys() -> Keys<T, SelectContext<'a>, SelOk, ()> {
+        Keys::<T, SelectContext<'a>, SelOk, ()>::default_keys()
     }
     
 }

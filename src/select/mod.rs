@@ -28,21 +28,24 @@ use derivative::Derivative;
 use super::compat::symbols;
 
 mod keys;
-pub use keys::KeysMut;
+//pub use keys::KeysMut;
 pub use keys::Keys;
 
 mod select;
 pub use select::Select;
+pub use select::SelectContext;
 
+/*
 mod non_block;
 pub use non_block::SelectNonBlock;
+*/
 
 const QUEUE_ERR:&'static str = "error in while setting stdout queue";
 const PRINTLINE_ERR:&'static str = "error in while flushing";
 
 //recomended to only modify the index field
-type KeyFunc<Type, RetOk, RetErr> = fn(&Type, usize, &mut Fields)->Result<RetOk, SelErr<RetErr>>;
-type KeyFuncMut<Type, RetOk, RetErr> = fn(&mut Type, usize, &mut Fields)->Result<RetOk, SelErr<RetErr>>;
+type KeyFunc<Type, Context, RetOk, RetErr> = fn(&[Type], usize, &mut usize, Context)->Result<RetOk, SelErr<RetErr>>;
+//type KeyFuncMut<Type, RetOk, RetErr> = fn(&mut Type, usize, &mut usize)->Result<RetOk, SelErr<RetErr>>;
 
 pub enum SelOk {
     Ok,
@@ -82,12 +85,13 @@ pub struct Configs {
 
 
 #[derive(Default)]
-pub struct RawSelect<Type, RetOk, RetErr> {
+pub struct RawSelect<Type, Context, RetOk, RetErr> {
     configs: RawConfigs,
     fields: Fields,
     pd_0: PhantomData<Type>,
     pd_1: PhantomData<RetOk>,
     pd_2: PhantomData<RetErr>,
+    pd_3: PhantomData<Context>,
 }
 
 #[derive(Default)]
@@ -98,7 +102,7 @@ pub struct RawConfigs {
 }
 
 
-impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
+impl<Type, Context, RetOk, RetErr> RawSelect<Type, Context, RetOk, RetErr> {
     pub fn new(configs: RawConfigs) -> Self {
         Self{
             configs,
@@ -106,6 +110,7 @@ impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
             pd_0:PhantomData,
             pd_1:PhantomData,
             pd_2:PhantomData,
+            pd_3:PhantomData,
         }
     }
     
@@ -157,6 +162,7 @@ impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
         poll(Duration::from_secs(0))
     }
     
+    /*
     pub fn raw_prompt_mut(&mut self, keys:&KeysMut<Type, RetOk, RetErr>, list:&mut [Type]) -> SelResult<RetOk, SelErr<RetErr>> {
         let key = match read().map_err(|err|SelErr::BaseErr(err)){
             Ok(ok) => {ok}
@@ -173,15 +179,16 @@ impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
         
         match keys.keys_get().get(&key) {
             Some(action) => {
-                match action(&mut list[*index], len, &mut self.fields) {
+                match action(&mut list[*index], len, &mut self.fields.index) {
                     Ok(ok) => {SelResult::Ok(ok)}
                     Err(err) => {SelResult::Err(err)}
                 }
             }
             None => {SelResult::KeyNotFound} }
     }
+    */
     
-    pub fn raw_prompt(&mut self, keys:&Keys<Type, RetOk, RetErr>, list:&[Type]) -> SelResult<RetOk, SelErr<RetErr>> {
+    pub fn raw_prompt(&mut self, keys:&Keys<Type, Context, RetOk, RetErr>, list:&[Type], tmp:Context, todel:&mut usize/* TODO:*/) -> SelResult<RetOk, SelErr<RetErr>> {
         let key = match read().map_err(|err|SelErr::BaseErr(err)){
             Ok(ok) => {ok}
             Err(err) => {return SelResult::Err(err);}
@@ -196,7 +203,7 @@ impl<Type, RetOk, RetErr> RawSelect<Type, RetOk, RetErr> {
         let len = list.len();
         match keys.keys_get().get(&key) {
             Some(action) => {
-                match action(&list[*index], len, &mut self.fields) {
+                match action(&list, len, todel, tmp) {
                     Ok(ok) => {SelResult::Ok(ok)}
                     Err(err) => {SelResult::Err(err)}
                 }
