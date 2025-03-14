@@ -33,7 +33,7 @@ pub use keys::Keys;
 
 mod select;
 pub use select::Select;
-pub use select::SelectContext;
+pub use select::ActCtx as SelectCtx;
 
 /*
 mod non_block;
@@ -44,7 +44,7 @@ const QUEUE_ERR:&'static str = "error in while setting stdout queue";
 const PRINTLINE_ERR:&'static str = "error in while flushing";
 
 //recomended to only modify the index field
-type KeyFunc<Type, Context, RetOk, RetErr> = fn(&[Type], Context)->Result<RetOk, SelErr<RetErr>>;
+type KeyFunc<Type, ActCtx, RetOk, RetErr> = fn(&[Type], &mut ActCtx)->Result<RetOk, SelErr<RetErr>>;
 //type KeyFuncMut<Type, RetOk, RetErr> = fn(&mut Type, usize, &mut usize)->Result<RetOk, SelErr<RetErr>>;
 
 pub enum SelOk {
@@ -68,7 +68,6 @@ pub enum SelResult<RetOk, RetErr> {
 #[derive(Derivative, Debug)]
 #[derivative(Default)]
 struct Fields {
-    index: usize,
     bottom: bool, //was menu started at the bottom
     #[derivative(Default(value="Point2{x:0,y:0}"))]
     window_measures: Point2<u16>,
@@ -85,14 +84,14 @@ pub struct Configs {
 
 
 #[derive(Default)]
-pub struct RawSelect<Type, Context, ContextPrint, RetOk, RetErr> {
+pub struct RawSelect<Type, ActCtx, PrintCtx, RetOk, RetErr> {
     configs: RawConfigs,
     fields: Fields,
     pd_0: PhantomData<Type>,
     pd_1: PhantomData<RetOk>,
     pd_2: PhantomData<RetErr>,
-    pd_3: PhantomData<Context>,
-    pd_4: PhantomData<ContextPrint>,
+    pd_3: PhantomData<ActCtx>,
+    pd_4: PhantomData<PrintCtx>,
 }
 
 #[derive(Default)]
@@ -103,7 +102,7 @@ pub struct RawConfigs {
 }
 
 
-impl<Type, Context, ContextPrint, RetOk, RetErr> RawSelect<Type, Context, ContextPrint, RetOk, RetErr> {
+impl<Type, ActCtx, PrintCtx, RetOk, RetErr> RawSelect<Type, ActCtx, PrintCtx, RetOk, RetErr> {
     pub fn new(configs: RawConfigs) -> Self {
         Self{
             configs,
@@ -190,24 +189,15 @@ impl<Type, Context, ContextPrint, RetOk, RetErr> RawSelect<Type, Context, Contex
     }
     */
     
-    pub fn raw_prompt(&mut self, keys:&Keys<Type, Context, RetOk, RetErr>, list:&[Type], tmp:Context, todel:&mut usize/* TODO:*/) -> SelResult<RetOk, SelErr<RetErr>> {
+    pub fn raw_prompt(&mut self, keys:&Keys<Type, ActCtx, RetOk, RetErr>, list:&[Type], mut tmp:&mut ActCtx) -> SelResult<RetOk, SelErr<RetErr>> {
         let key = match read().map_err(|err|SelErr::BaseErr(err)){
             Ok(ok) => {ok}
             Err(err) => {return SelResult::Err(err);}
         };
-        /*
-        let Self{
-            fields: Fields{
-                index,
-                ..
-            },
-            ..
-        }= self;
-        */
-        let len = list.len();
+        
         match keys.keys_get().get(&key) {
             Some(action) => {
-                match action(&list, tmp) {
+                match action(&list, &mut tmp) {
                     Ok(ok) => {SelResult::Ok(ok)}
                     Err(err) => {SelResult::Err(err)}
                 }
@@ -231,10 +221,9 @@ impl<Type, Context, ContextPrint, RetOk, RetErr> RawSelect<Type, Context, Contex
         disable_raw_mode()
     }
     
-    pub fn print_line(&mut self, entries:&[Type], print_callback:fn(u16, u16, usize, &[Type], &mut ContextPrint)->Result<(), IOError>, mut modi:ContextPrint) -> Result<(), IOError> {
+    pub fn print_line(&mut self, entries:&[Type], mut modi:PrintCtx, print_callback:fn(u16, u16, &[Type], &mut PrintCtx)->Result<(), IOError>) -> Result<(), IOError> {
         let Self{
             fields: Fields{
-                index,
                 init_position,
                 ..
             },
@@ -246,7 +235,6 @@ impl<Type, Context, ContextPrint, RetOk, RetErr> RawSelect<Type, Context, Contex
         } = self;
         
         let table_size = *table_size;
-        let index = *index;
         queue!(
             stdout(), 
             MoveTo(init_position.x, init_position.y),
@@ -256,7 +244,7 @@ impl<Type, Context, ContextPrint, RetOk, RetErr> RawSelect<Type, Context, Contex
                 stdout(), 
                 MoveToColumn(0),
             )?;
-            print_callback(line, table_size, index, entries, &mut modi)?;
+            print_callback(line, table_size, entries, &mut modi)?;
             queue!(
                 stdout(), 
                 MoveToNextLine(1),
