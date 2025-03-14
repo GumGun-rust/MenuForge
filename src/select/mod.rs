@@ -44,7 +44,7 @@ const QUEUE_ERR:&'static str = "error in while setting stdout queue";
 const PRINTLINE_ERR:&'static str = "error in while flushing";
 
 //recomended to only modify the index field
-type KeyFunc<Type, Context, RetOk, RetErr> = fn(&[Type], usize, &mut usize, Context)->Result<RetOk, SelErr<RetErr>>;
+type KeyFunc<Type, Context, RetOk, RetErr> = fn(&[Type], Context)->Result<RetOk, SelErr<RetErr>>;
 //type KeyFuncMut<Type, RetOk, RetErr> = fn(&mut Type, usize, &mut usize)->Result<RetOk, SelErr<RetErr>>;
 
 pub enum SelOk {
@@ -85,13 +85,14 @@ pub struct Configs {
 
 
 #[derive(Default)]
-pub struct RawSelect<Type, Context, RetOk, RetErr> {
+pub struct RawSelect<Type, Context, ContextPrint, RetOk, RetErr> {
     configs: RawConfigs,
     fields: Fields,
     pd_0: PhantomData<Type>,
     pd_1: PhantomData<RetOk>,
     pd_2: PhantomData<RetErr>,
     pd_3: PhantomData<Context>,
+    pd_4: PhantomData<ContextPrint>,
 }
 
 #[derive(Default)]
@@ -102,7 +103,7 @@ pub struct RawConfigs {
 }
 
 
-impl<Type, Context, RetOk, RetErr> RawSelect<Type, Context, RetOk, RetErr> {
+impl<Type, Context, ContextPrint, RetOk, RetErr> RawSelect<Type, Context, ContextPrint, RetOk, RetErr> {
     pub fn new(configs: RawConfigs) -> Self {
         Self{
             configs,
@@ -111,6 +112,7 @@ impl<Type, Context, RetOk, RetErr> RawSelect<Type, Context, RetOk, RetErr> {
             pd_1:PhantomData,
             pd_2:PhantomData,
             pd_3:PhantomData,
+            pd_4:PhantomData,
         }
     }
     
@@ -193,6 +195,7 @@ impl<Type, Context, RetOk, RetErr> RawSelect<Type, Context, RetOk, RetErr> {
             Ok(ok) => {ok}
             Err(err) => {return SelResult::Err(err);}
         };
+        /*
         let Self{
             fields: Fields{
                 index,
@@ -200,10 +203,11 @@ impl<Type, Context, RetOk, RetErr> RawSelect<Type, Context, RetOk, RetErr> {
             },
             ..
         }= self;
+        */
         let len = list.len();
         match keys.keys_get().get(&key) {
             Some(action) => {
-                match action(&list, len, todel, tmp) {
+                match action(&list, tmp) {
                     Ok(ok) => {SelResult::Ok(ok)}
                     Err(err) => {SelResult::Err(err)}
                 }
@@ -227,7 +231,7 @@ impl<Type, Context, RetOk, RetErr> RawSelect<Type, Context, RetOk, RetErr> {
         disable_raw_mode()
     }
     
-    pub fn print_line(&mut self, entries:&[Type], print_callback:fn(u16, u16, usize, &[Type])->Result<(), IOError>) -> Result<(), IOError> {
+    pub fn print_line(&mut self, entries:&[Type], print_callback:fn(u16, u16, usize, &[Type], &mut ContextPrint)->Result<(), IOError>, mut modi:ContextPrint) -> Result<(), IOError> {
         let Self{
             fields: Fields{
                 index,
@@ -252,7 +256,7 @@ impl<Type, Context, RetOk, RetErr> RawSelect<Type, Context, RetOk, RetErr> {
                 stdout(), 
                 MoveToColumn(0),
             )?;
-            print_callback(line, table_size, index, entries)?;
+            print_callback(line, table_size, index, entries, &mut modi)?;
             queue!(
                 stdout(), 
                 MoveToNextLine(1),

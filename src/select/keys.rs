@@ -174,17 +174,17 @@ impl<'a, Type> Keys<Type, SelectContext<'a>, SelOk, ()> {
     }
     
     #[allow(dead_code)]
-    fn exit(_:&[Type], _:usize, _:&mut usize, _:SelectContext<'a>) -> Result<SelOk, SelErr<()>> {
+    fn exit(_:&[Type], _:SelectContext<'a>) -> Result<SelOk, SelErr<()>> {
         Ok(SelOk::Exit)
     }
     
     #[allow(dead_code)]
-    fn nope(_:&[Type], _:usize, _:&mut usize, _:SelectContext<'a>) -> Result<SelOk, SelErr<()>> {
+    fn nope(_:&[Type], _:SelectContext<'a>) -> Result<SelOk, SelErr<()>> {
         Ok(SelOk::Ok)
     }
     
     #[allow(dead_code)]
-    fn move_cursor_down(_:&[Type], size:usize, index:&mut usize, modi:SelectContext<'a>) -> Result<SelOk, SelErr<()>> {
+    fn move_cursor_down(_:&[Type], modi:SelectContext<'a>) -> Result<SelOk, SelErr<()>> {
         let (size, index) = modi;
         if *index < size-1 {
             *index += 1;
@@ -193,7 +193,7 @@ impl<'a, Type> Keys<Type, SelectContext<'a>, SelOk, ()> {
     }
     
     #[allow(dead_code)]
-    fn move_cursor_up(_:&[Type], _:usize, index:&mut usize, modi:SelectContext<'a>) -> Result<SelOk, SelErr<()>> {
+    fn move_cursor_up(_:&[Type], modi:SelectContext<'a>) -> Result<SelOk, SelErr<()>> {
         let (_, index) = modi;
         if *index > 0 {
             *index -= 1;
@@ -202,7 +202,7 @@ impl<'a, Type> Keys<Type, SelectContext<'a>, SelOk, ()> {
     }
     
     #[allow(dead_code)]
-    fn abort(_:&[Type], _:usize, _:&mut usize, _:SelectContext<'a>) -> Result<SelOk, SelErr<()>> {
+    fn abort(_:&[Type], _:SelectContext<'a>) -> Result<SelOk, SelErr<()>> {
         Ok(SelOk::Abort)
     }
     

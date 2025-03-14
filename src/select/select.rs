@@ -24,14 +24,15 @@ use crossterm::terminal::ClearType;
 use const_format::formatcp;
 
 pub type SelectContext<'a> = (usize, &'a mut usize);
+pub type SelectContextPrint = usize;
 
 //Options cant be updated in real time functions will block until the menu is completely clossed
 pub struct Select<'a, Type> {
     holder: usize,
     holder2: usize,
     configs: Configs,
-    keys: Keys<Type, (usize, &'a mut usize), SelOk, ()>,
-    inner: RawSelect<Type, (usize, &'a mut usize), SelOk, ()>,
+    keys: Keys<Type, SelectContext<'a>, SelOk, ()>,
+    inner: RawSelect<Type, SelectContext<'a>, usize, SelOk, ()>,
 }
 
 
@@ -48,19 +49,18 @@ impl<'a, T:std::fmt::Display> Select<'a, T> {
             holder2: 12,
             configs,
             keys, 
-            inner:RawSelect::<T, SelectContext<'a>, SelOk, ()>::new(config_holder)
+            inner:RawSelect::<T, SelectContext<'a>, usize, SelOk, ()>::new(config_holder)
         }
     }
     
     pub fn prompt(&'a mut self, list:&[T]) -> Result<Option<usize>, IOError> {
         self.inner.init_prompt()?;
-        self.inner.print_line(list, Self::print_func)?;
+        self.inner.print_line(list, Self::print_func, 0)?;//TODO: borrar
         
         let holder = &mut self.holder;
         let holder2 = &mut self.holder2;
         
-        
-        match self.inner.raw_prompt(&self.keys, list, (0, holder), holder2) {
+        match self.inner.raw_prompt(&self.keys, list, (0, holder), holder2) {//TODO: borrar
             _ => {
                 
             }
@@ -101,7 +101,8 @@ impl<'a, T:std::fmt::Display> Select<'a, T> {
     const UP_ARROW:&'static str = formatcp!(" {} ", symbols::UP_ARROW);
     const DOWN_ARROW:&'static str = formatcp!(" {} ", symbols::DOWN_ARROW);
     
-    fn print_func(line:u16, menu_size:u16, index:usize, entries:&[T]) -> Result<(), IOError> {
+    fn print_func(line:u16, menu_size:u16, index:usize, entries:&[T], ctx:&mut usize) -> Result<(), IOError> {
+        let index = *ctx;
         let half = menu_size/2/*+menu_size%2*/;
         let pair_offset:usize = if menu_size%2==0 {1} else {0};
         let pair_complements:usize = if menu_size%2==0 {0} else {1};
