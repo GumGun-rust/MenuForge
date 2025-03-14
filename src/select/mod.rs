@@ -88,10 +88,10 @@ pub struct RawSelect<Type, ActCtx, PrintCtx, RetOk, RetErr> {
     configs: RawConfigs,
     fields: Fields,
     pd_0: PhantomData<Type>,
-    pd_1: PhantomData<RetOk>,
-    pd_2: PhantomData<RetErr>,
-    pd_3: PhantomData<ActCtx>,
-    pd_4: PhantomData<PrintCtx>,
+    pd_1: PhantomData<ActCtx>,
+    pd_2: PhantomData<PrintCtx>,
+    pd_3: PhantomData<RetOk>,
+    pd_4: PhantomData<RetErr>,
 }
 
 #[derive(Default)]
@@ -103,6 +103,10 @@ pub struct RawConfigs {
 
 
 impl<Type, ActCtx, PrintCtx, RetOk, RetErr> RawSelect<Type, ActCtx, PrintCtx, RetOk, RetErr> {
+    
+    //type PrintCbk = fn(u16, u16, &[Type], &mut PrintCtx)->Result<(), IOError>; 
+    /* Inherent Associated types are unstable */
+    
     pub fn new(configs: RawConfigs) -> Self {
         Self{
             configs,
