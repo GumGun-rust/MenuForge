@@ -2,8 +2,10 @@ use super::SelOk;
 use super::SelErr;
 //use super::KeyFuncMut;
 use super::KeyFunc;
-use super::SelectCtx;
+use super::SelectActCtx;
+use super::SelectKeysDS;
 
+use std::marker::PhantomData;
 use std::collections::HashMap;
 
 use crossterm::event;
@@ -104,26 +106,74 @@ impl<Type> KeysMut<Type, SelOk, ()> {
     fn abort(_:&mut Type, _:usize, _:&mut usize) -> Result<SelOk, SelErr<()>> {
         Ok(SelOk::Abort)
     }
-    
 }
 */
 
-#[derive(Derivative)]
-#[derivative(Default)]
-pub struct Keys<Type, ActCtx, RetOk, RetErr> {
-    #[derivative(Default(bound=""))]
-    keys: HashMap<event::Event, KeyFunc<Type, ActCtx, RetOk, RetErr>>,
+//type KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr> = for<'a> fn(&'a mut KeyType, &'a mut ActCtx, event:&'a event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>>;
+type KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr> = fn(&mut KeyType, &mut ActCtx, &event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>>;
+
+//#[derive(Derivative)]
+//#[derivative(Default)]
+pub struct Keys<Type, KeyType, ActCtx, RetOk, RetErr> {
+    //#[derivative(Default(bound=""))]
+    //TODO: Change this field for a generic
+
+    data_holder: KeyType, //HashMap<event::Event, KeyFunc<Type, ActCtx, RetOk, RetErr>>,
+    //function: KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr>,
+    function: KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr>,
+    pd_0: PhantomData<Type>,
+    pd_1: PhantomData<KeyType>,
+    pd_2: PhantomData<ActCtx>,
+    pd_3: PhantomData<RetOk>,
+    pd_4: PhantomData<RetErr>,
 }
 
-impl<Type, ActCtx, RetOk, RetErr> Keys<Type, ActCtx, RetOk, RetErr> {
-    pub(super) fn keys_get(&self) -> &HashMap<event::Event, KeyFunc<Type, ActCtx, RetOk, RetErr>>{
-        &self.keys
+impl<Type, KeyType, ActCtx, RetOk, RetErr> Keys<Type, KeyType, ActCtx, RetOk, RetErr> {
+    
+    //pub(super) fn new(b: KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr>) -> Self {
+    pub(super) fn new(data_holder:KeyType, b:for<'a> fn(&'a mut KeyType, &'a mut ActCtx, &'a event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>>) -> Self {
+        Self{
+            data_holder: data_holder,
+            //keys: HashMap::default(),
+            function: b,
+            pd_0: PhantomData,
+            pd_1: PhantomData,
+            pd_2: PhantomData,
+            pd_3: PhantomData,
+            pd_4: PhantomData,
+        }
+    }
+    
+    pub(super) fn get_key_action(&mut self, ctx:&mut ActCtx, event:&event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>> {
+        
+        (self.function)(&mut self.data_holder, ctx, event)
     }
 }
 
-impl<Type> Keys<Type, SelectCtx<'_>, SelOk, ()> {
+/*
+//TODO: Todo check this function
+fn test_in<Type, KeyType, ActCtx, RetOk, RetErr>(holder:&mut KeyType, b:&mut ActCtx, c:&event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>> {
+    panic!();
+}
+*/
+fn test_in<'a, Type>(holder:&mut SelectKeysDS<'a, Type>, b:&mut SelectActCtx<'a>, c:&event::Event) -> Option<KeyFunc<Type, SelectActCtx<'a>, SelOk, ()>> {
+    panic!();
+}
+
+impl<Type> Keys<Type, SelectKeysDS<'_, Type>, SelectActCtx<'_>, SelOk, ()> {
+    
+    //fn test_in<Type, KeyType, ActCtx, RetOk, RetErr>(holder:&mut KeyType, b:&mut ActCtx, c:&event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>> {
+    fn test_in1<'a, 'b, 'c>(holder:&'a mut SelectKeysDS<'c, Type>, b:&'a mut SelectActCtx<'b>, c:&'a event::Event) -> Option<KeyFunc<Type, SelectActCtx<'b>, SelOk, ()>> {
+        
+        panic!();
+    }
+    
+    
     pub fn default_keys() -> Self {
-        let mut keys = Self::default();
+        
+        let mut keys = Self::new(HashMap::default(), Self::test_in1);
+        
+        //TODO: try a unit case where you save a partial specific function from a generic function to see how it needs to be casted
         let key = event::Event::Key(
             event::KeyEvent{
                 code: event::KeyCode::Char('k'),
@@ -132,7 +182,7 @@ impl<Type> Keys<Type, SelectCtx<'_>, SelOk, ()> {
                 state: event::KeyEventState::NONE,
             }
         );
-        assert_eq!(keys.keys.insert(key, Self::move_cursor_up), None);
+        assert_eq!(keys.data_holder.insert(key, Self::move_cursor_up), None);
         let key = event::Event::Key(
             event::KeyEvent{
                 code: event::KeyCode::Char('j'),
@@ -141,7 +191,7 @@ impl<Type> Keys<Type, SelectCtx<'_>, SelOk, ()> {
                 state: event::KeyEventState::NONE,
             }
         );
-        assert_eq!(keys.keys.insert(key, Self::move_cursor_down), None);
+        assert_eq!(keys.data_holder.insert(key, Self::move_cursor_down), None);
         let key = event::Event::Key(
             event::KeyEvent{
                 code: event::KeyCode::Enter,
@@ -150,7 +200,7 @@ impl<Type> Keys<Type, SelectCtx<'_>, SelOk, ()> {
                 state: event::KeyEventState::NONE,
             }
         );
-        assert_eq!(keys.keys.insert(key, Self::exit), None);
+        assert_eq!(keys.data_holder.insert(key, Self::exit), None);
         let key = event::Event::Key(
             event::KeyEvent{
                 code: event::KeyCode::Char('q'),
@@ -159,7 +209,7 @@ impl<Type> Keys<Type, SelectCtx<'_>, SelOk, ()> {
                 state: event::KeyEventState::NONE,
             }
         );
-        assert_eq!(keys.keys.insert(key, Self::abort), None);
+        assert_eq!(keys.data_holder.insert(key, Self::abort), None);
         let key = event::Event::Key(
             event::KeyEvent{
                 code: event::KeyCode::Char('c'),
@@ -168,23 +218,24 @@ impl<Type> Keys<Type, SelectCtx<'_>, SelOk, ()> {
                 state: event::KeyEventState::NONE,
             }
         );
-        assert_eq!(keys.keys.insert(key, Self::abort), None);
+        assert_eq!(keys.data_holder.insert(key, Self::abort), None);
         keys
     }
     
     #[allow(dead_code)]
-    fn exit(_:&[Type], _:&mut SelectCtx) -> Result<SelOk, SelErr<()>> {
-        Ok(SelOk::Exit)
+    fn exit(_:&[Type], ctx:&mut SelectActCtx) -> Result<SelOk, SelErr<()>> {
+        let (_, index) = ctx;
+        Ok(SelOk::Exit(**index))
     }
     
     #[allow(dead_code)]
-    fn nope(_:&[Type], _:&mut SelectCtx) -> Result<SelOk, SelErr<()>> {
+    fn nope(_:&[Type], _:&mut SelectActCtx) -> Result<SelOk, SelErr<()>> {
         Ok(SelOk::Ok)
     }
     
     #[allow(dead_code)]
-    fn move_cursor_down(_:&[Type], modi:&mut SelectCtx) -> Result<SelOk, SelErr<()>> {
-        let (size, index) = modi;
+    fn move_cursor_down(_:&[Type], ctx:&mut SelectActCtx) -> Result<SelOk, SelErr<()>> {
+        let (size, index) = ctx;
         if **index < *size-1 {
             **index += 1;
         }
@@ -192,8 +243,8 @@ impl<Type> Keys<Type, SelectCtx<'_>, SelOk, ()> {
     }
     
     #[allow(dead_code)]
-    fn move_cursor_up(_:&[Type], modi:&mut SelectCtx) -> Result<SelOk, SelErr<()>> {
-        let (_, index) = modi;
+    fn move_cursor_up(_:&[Type], ctx:&mut SelectActCtx) -> Result<SelOk, SelErr<()>> {
+        let (_, index) = ctx;
         if **index > 0 {
             **index -= 1;
         }
@@ -201,7 +252,7 @@ impl<Type> Keys<Type, SelectCtx<'_>, SelOk, ()> {
     }
     
     #[allow(dead_code)]
-    fn abort(_:&[Type], _:&mut SelectCtx) -> Result<SelOk, SelErr<()>> {
+    fn abort(_:&[Type], _:&mut SelectActCtx) -> Result<SelOk, SelErr<()>> {
         Ok(SelOk::Abort)
     }
 }

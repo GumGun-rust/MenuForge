@@ -1,15 +1,16 @@
 use super::symbols;
 use super::Keys;
-use super::SelOk;
-use super::SelResult;
+use super::RawSelResult;
 use super::Configs;
 use super::RawConfigs;
 use super::RawSelect;
 use super::QUEUE_ERR;
 use super::PRINTLINE_ERR;
+use super::KeyFunc;
 
 use std::io::Error as IOError;
 use std::io::stdout;
+use std::collections::HashMap;
 
 use crossterm::queue; 
 use crossterm::style::Print;
@@ -19,26 +20,33 @@ use crossterm::style::Colors;
 use crossterm::style::ResetColor;
 use crossterm::terminal::Clear;
 use crossterm::terminal::ClearType;
+use crossterm::event;
 
 
 use const_format::formatcp;
 
 pub type ActCtx<'a> = (usize, &'a mut usize);
 pub type PrintCtx = usize;
+pub type KeysDS<'a, Type> = HashMap<event::Event, KeyFunc<Type, ActCtx<'a>, SelOk, ()>>;
 
 //Options cant be updated in real time functions will block until the menu is completely clossed
-pub struct Select<'a, Type> {
+pub struct Select<'a, 'b, Type> {
     index: usize,
     configs: Configs,
-    keys: Keys<Type, ActCtx<'a>, SelOk, ()>,
+    keys: Keys<Type, KeysDS<'b, Type>, ActCtx<'a>, SelOk, ()>,
     inner: RawSelect<Type, ActCtx<'a>, usize, SelOk, ()>,
 }
 
+pub enum SelOk {
+    Ok,
+    Exit(usize),
+    Abort,
+}
 
 
-impl<'a, T:std::fmt::Display> Select<'a, T> {
+impl<'a, 'b, Type:std::fmt::Display> Select<'a, 'b, Type> {
     
-    pub fn new(keys: Keys<T, ActCtx<'a>, SelOk, ()>, configs:Configs, table_size:u16) -> Self {
+    pub fn new(keys: Keys<Type, KeysDS<'b, Type>, ActCtx<'a>, SelOk, ()>, configs:Configs, table_size:u16) -> Self {
         
         let mut config_holder = RawConfigs::default();
         config_holder.table_size = table_size;
@@ -47,11 +55,11 @@ impl<'a, T:std::fmt::Display> Select<'a, T> {
             index: 0,
             configs,
             keys, 
-            inner:RawSelect::<T, ActCtx<'a>, usize, SelOk, ()>::new(config_holder)
+            inner:RawSelect::<Type, ActCtx<'a>, usize, SelOk, ()>::new(config_holder)
         }
     }
     
-    pub fn prompt(&'a mut self, list:&[T]) -> Result<Option<usize>, IOError> {
+    pub fn prompt(&'a mut self, list:&[Type]) -> Result<Option<usize>, IOError> {
         let mut ctx:ActCtx = (list.len(), &mut self.index);
         
         self.inner.init_prompt()?;
@@ -59,24 +67,24 @@ impl<'a, T:std::fmt::Display> Select<'a, T> {
         
         
         let ret = loop{
-            match self.inner.raw_prompt(&self.keys, list, &mut ctx) {
-                SelResult::Ok(ok) => {
+            match self.inner.raw_prompt(&mut self.keys, list, &mut ctx) {
+                RawSelResult::Ok(ok) => {
                     match ok {
                         SelOk::Ok => {
                             self.inner.print_line(list, *ctx.1, Self::print_func).expect(PRINTLINE_ERR);
                         }
-                        SelOk::Exit => {
-                            break Some(10);
+                        SelOk::Exit(ret) => {
+                            break Some(ret);
                         }
                         SelOk::Abort => {
                             break None;
                         }
                     }
                 }
-                SelResult::Err(_) => {
+                RawSelResult::Err(_) => {
                     break None;
                 }
-                SelResult::KeyNotFound => {
+                RawSelResult::KeyNotFound => {
                     if self.configs.exit_on_new_key {
                         break None;
                     }
@@ -92,7 +100,7 @@ impl<'a, T:std::fmt::Display> Select<'a, T> {
     const DOWN_ARROW:&'static str = formatcp!(" {} ", symbols::DOWN_ARROW);
     
     
-    fn print_func(line:u16, menu_size:u16, entries:&[T], print_ctx:&mut PrintCtx) -> Result<(), IOError> {
+    fn print_func(line:u16, menu_size:u16, entries:&[Type], print_ctx:&mut PrintCtx) -> Result<(), IOError> {
         let index = *print_ctx;
         let half = menu_size/2;
         let pair_offset:usize = if menu_size%2==0 {1} else {0};
@@ -185,8 +193,9 @@ impl<'a, T:std::fmt::Display> Select<'a, T> {
         )
     }
     
-    pub fn gen_default_keys() -> Keys<T, ActCtx<'a>, SelOk, ()> {
-        Keys::<T, ActCtx<'a>, SelOk, ()>::default_keys()
+    pub fn gen_default_keys() -> Keys<Type, KeysDS<'a, Type>, ActCtx<'a>, SelOk, ()> {
+        
+        Keys::<Type, KeysDS<'a, Type>, ActCtx<'a>, SelOk, ()>::default_keys()
     }
     
 }

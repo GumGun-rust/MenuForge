@@ -33,7 +33,9 @@ pub use keys::Keys;
 
 mod select;
 pub use select::Select;
-pub use select::ActCtx as SelectCtx;
+pub use select::SelOk;
+pub use select::ActCtx as SelectActCtx;
+pub use select::KeysDS as SelectKeysDS;
 
 /*
 mod non_block;
@@ -47,18 +49,12 @@ const PRINTLINE_ERR:&'static str = "error in while flushing";
 type KeyFunc<Type, ActCtx, RetOk, RetErr> = fn(&[Type], &mut ActCtx)->Result<RetOk, SelErr<RetErr>>;
 //type KeyFuncMut<Type, RetOk, RetErr> = fn(&mut Type, usize, &mut usize)->Result<RetOk, SelErr<RetErr>>;
 
-pub enum SelOk {
-    Ok,
-    Exit,
-    Abort,
-}
-
 pub enum SelErr<RetErr> {
     BaseErr(IOError),
     UserErr(RetErr),
 }
 
-pub enum SelResult<RetOk, RetErr> {
+pub enum RawSelResult<RetOk, RetErr> {
     Ok(RetOk),
     Err(RetErr),
     KeyNotFound,
@@ -168,10 +164,10 @@ impl<Type, ActCtx, PrintCtx, RetOk, RetErr> RawSelect<Type, ActCtx, PrintCtx, Re
     }
     
     /*
-    pub fn raw_prompt_mut(&mut self, keys:&KeysMut<Type, RetOk, RetErr>, list:&mut [Type]) -> SelResult<RetOk, SelErr<RetErr>> {
+    pub fn raw_prompt_mut(&mut self, keys:&KeysMut<Type, RetOk, RetErr>, list:&mut [Type]) -> RawSelResult<RetOk, SelErr<RetErr>> {
         let key = match read().map_err(|err|SelErr::BaseErr(err)){
             Ok(ok) => {ok}
-            Err(err) => {return SelResult::Err(err);}
+            Err(err) => {return RawSelResult::Err(err);}
         };
         let Self{
             fields: Fields{
@@ -185,30 +181,34 @@ impl<Type, ActCtx, PrintCtx, RetOk, RetErr> RawSelect<Type, ActCtx, PrintCtx, Re
         match keys.keys_get().get(&key) {
             Some(action) => {
                 match action(&mut list[*index], len, &mut self.fields.index) {
-                    Ok(ok) => {SelResult::Ok(ok)}
-                    Err(err) => {SelResult::Err(err)}
+                    Ok(ok) => {RawSelResult::Ok(ok)}
+                    Err(err) => {RawSelResult::Err(err)}
                 }
             }
-            None => {SelResult::KeyNotFound} }
+            None => {RawSelResult::KeyNotFound} }
     }
     */
     
-    pub fn raw_prompt(&mut self, keys:&Keys<Type, ActCtx, RetOk, RetErr>, list:&[Type], mut tmp:&mut ActCtx) -> SelResult<RetOk, SelErr<RetErr>> {
-        let key = match read().map_err(|err|SelErr::BaseErr(err)){
+    pub fn raw_prompt<T>(&mut self, keys:&mut Keys<Type, T, ActCtx, RetOk, RetErr>, list:&[Type], mut action_ctx:&mut ActCtx) -> RawSelResult<RetOk, SelErr<RetErr>> {
+        
+        let key = match read() {
             Ok(ok) => {ok}
-            Err(err) => {return SelResult::Err(err);}
+            Err(err) => {return RawSelResult::Err(SelErr::BaseErr(err));}
         };
         
-        match keys.keys_get().get(&key) {
+        match keys.get_key_action(&mut action_ctx, &key) {
             Some(action) => {
-                match action(&list, &mut tmp) {
-                    Ok(ok) => {SelResult::Ok(ok)}
-                    Err(err) => {SelResult::Err(err)}
+                match action(&list, &mut action_ctx) {
+                    Ok(ok) => {RawSelResult::Ok(ok)}
+                    Err(err) => {RawSelResult::Err(err)}
                 }
             }
-            None => {SelResult::KeyNotFound} 
+            None => {RawSelResult::KeyNotFound} 
         }
     }
+    
+    /* test I think you should have a way o telling that the key was not present. */
+    /*  */
     
     pub fn end_prompt(&mut self) -> Result<(), IOError> {
         if self.fields.bottom {
