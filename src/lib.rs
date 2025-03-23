@@ -3,10 +3,16 @@ mod compat;
 mod keys;
 
 pub use select::Select;
+pub use select::SelConf;
+
 //pub use select::SelectNonBlock;
 pub use select::RawSelect;
-//pub use select::KeysMut;
-pub use select::Configs as SelConfigs;
+pub use select::RawConfigs;
+pub use select::KeysTrait;
+pub use select::KeyFunc;
+pub use select::SelErr;
+pub use crossterm;
+
 
 /*
 fn add(left: u64, right: u64) -> u64 {

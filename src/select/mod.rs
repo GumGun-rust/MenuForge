@@ -29,12 +29,13 @@ use super::compat::symbols;
 
 mod keys;
 pub use keys::Keys;
-use keys::KeysTrait;
+pub use keys::KeysTrait;
 use keys::KeysTraitMut;
 
 mod select;
 pub use select::Select;
 pub use select::SelOk;
+pub use select::Configs as SelConf;
 pub use select::ActCtx as SelectActCtx;
 pub use select::KeysDS as SelectKeysDS;
 
@@ -47,7 +48,8 @@ const QUEUE_ERR:&'static str = "error in while setting stdout queue";
 const PRINTLINE_ERR:&'static str = "error in while flushing";
 
 //recomended to only modify the index field
-type KeyFunc<Type, ActCtx, RetOk, RetErr> = fn(&[Type], &mut ActCtx)->Result<RetOk, SelErr<RetErr>>;
+//TODO: check the public level of this
+pub type KeyFunc<Type, ActCtx, RetOk, RetErr> = fn(&[Type], &mut ActCtx)->Result<RetOk, SelErr<RetErr>>;
 type KeyFuncMut<Type, ActCtx, RetOk, RetErr> = fn(&mut[Type], &mut ActCtx)->Result<RetOk, SelErr<RetErr>>;
 
 pub enum SelErr<RetErr> {
@@ -85,9 +87,7 @@ pub struct RawSelect<Type, ActCtx, PrintCtx, RetOk, RetErr> {
 
 #[derive(Default)]
 pub struct RawConfigs {
-    table_size: u16,
-    //exit_on_new_key:bool,
-    //new_options:bool,
+    pub table_size: u16,
 }
 
 

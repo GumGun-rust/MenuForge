@@ -14,9 +14,9 @@ use std::collections::HashMap;
 
 use crossterm::queue; 
 use crossterm::style::Print;
-use crossterm::style::SetColors; 
 use crossterm::style::Color; 
 use crossterm::style::Colors; 
+use crossterm::style::SetColors; 
 use crossterm::style::ResetColor;
 use crossterm::terminal::Clear;
 use crossterm::terminal::ClearType;
@@ -54,6 +54,9 @@ pub enum SelOk {
 
 
 impl<'a, 'b, Type:std::fmt::Display> Select<'a, 'b, Type> {
+    
+    const UP_ARROW:&'static str = formatcp!(" {} ", symbols::UP_ARROW);
+    const DOWN_ARROW:&'static str = formatcp!(" {} ", symbols::DOWN_ARROW);
     
     pub fn new(keys: Keys<Type, KeysDS<'b, Type>, ActCtx<'a>, SelOk, ()>, configs:Configs, table_size:u16) -> Self {
         
@@ -102,9 +105,6 @@ impl<'a, 'b, Type:std::fmt::Display> Select<'a, 'b, Type> {
         self.inner.end_prompt()?;
         Ok(ret)
     }
-    
-    const UP_ARROW:&'static str = formatcp!(" {} ", symbols::UP_ARROW);
-    const DOWN_ARROW:&'static str = formatcp!(" {} ", symbols::DOWN_ARROW);
     
     fn print_func(line:u16, menu_size:u16, entries:&[Type], print_ctx:&mut PrintCtx) -> Result<(), IOError> {
         let index = *print_ctx;
@@ -237,5 +237,6 @@ impl<'a, 'b, Type:std::fmt::Display> Select<'a, 'b, Type> {
     pub fn abort(_:&[Type], _:&mut ActCtx) -> Result<SelOk, SelErr<()>> {
         Ok(SelOk::Abort)
     }
+    
 }
 
