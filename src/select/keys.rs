@@ -1,6 +1,6 @@
 use super::SelOk;
-use super::SelErr;
-//use super::KeyFuncMut;
+use super::Select;
+use super::KeyFuncMut;
 use super::KeyFunc;
 use super::SelectActCtx;
 use super::SelectKeysDS;
@@ -12,6 +12,10 @@ use crossterm::event;
 
 pub trait KeysTrait<Type, ActCtx, RetOk, RetErr> {
     fn get_key_action(&mut self, _:&mut ActCtx, _:&event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>>;
+}
+
+pub trait KeysTraitMut<Type, ActCtx, RetOk, RetErr> {
+    fn get_key_action_mut(&mut self, _:&mut ActCtx, _:&event::Event) -> Option<KeyFuncMut<Type, ActCtx, RetOk, RetErr>>;
 }
 
 //use derivative::Derivative;
@@ -112,11 +116,10 @@ impl<Type> KeysMut<Type, SelOk, ()> {
 }
 */
 
-//type KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr> = for<'a> fn(&'a mut KeyType, &'a mut ActCtx, event:&'a event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>>;
 type KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr> = fn(&mut KeyType, &mut ActCtx, &event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>>;
 
 pub struct Keys<Type, KeyType, ActCtx, RetOk, RetErr> {
-    data_holder: KeyType, //HashMap<event::Event, KeyFunc<Type, ActCtx, RetOk, RetErr>>,
+    data_holder: KeyType, 
     function: KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr>,
     pd_0: PhantomData<Type>,
     pd_1: PhantomData<KeyType>,
@@ -146,26 +149,13 @@ impl<Type, KeyType, ActCtx, RetOk, RetErr> Keys<Type, KeyType, ActCtx, RetOk, Re
     }
 }
 
-/*
-//TODO: Todo check this function
-fn test_in<Type, KeyType, ActCtx, RetOk, RetErr>(holder:&mut KeyType, b:&mut ActCtx, c:&event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>> {
-    panic!();
-}
-*/
-/*
-fn test_in<'a, Type>(holder:&mut SelectKeysDS<'a, Type>, b:&mut SelectActCtx<'a>, c:&event::Event) -> Option<KeyFunc<Type, SelectActCtx<'a>, SelOk, ()>> {
-    panic!();
-}
-*/
-
-impl<'x, Type> Keys<Type, SelectKeysDS<'x, Type>, SelectActCtx<'x>, SelOk, ()> {
-    //fn test_in<Type, KeyType, ActCtx, RetOk, RetErr>(holder:&mut KeyType, b:&mut ActCtx, c:&event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>> {
+impl<'x, Type:std::fmt::Display> Keys<Type, SelectKeysDS<'x, Type>, SelectActCtx<'x>, SelOk, ()> {
+    
     fn function_cbk<'a, 'c>(data_holder:&'a mut SelectKeysDS<'c, Type>, _action_ctx:&'a mut SelectActCtx<'c>, event:&'a event::Event) -> Option<KeyFunc<Type, SelectActCtx<'c>, SelOk, ()>> {
         data_holder.get(event).copied()
     }
     
     pub fn default_keys() -> Self {
-        
         let mut keys = Self::new(HashMap::default(), Self::function_cbk);
         
         let key = event::Event::Key(
@@ -176,7 +166,7 @@ impl<'x, Type> Keys<Type, SelectKeysDS<'x, Type>, SelectActCtx<'x>, SelOk, ()> {
                 state: event::KeyEventState::NONE,
             }
         );
-        assert_eq!(keys.data_holder.insert(key, Self::move_cursor_up), None);
+        assert_eq!(keys.data_holder.insert(key, Select::move_cursor_up), None);
         let key = event::Event::Key(
             event::KeyEvent{
                 code: event::KeyCode::Char('j'),
@@ -185,7 +175,7 @@ impl<'x, Type> Keys<Type, SelectKeysDS<'x, Type>, SelectActCtx<'x>, SelOk, ()> {
                 state: event::KeyEventState::NONE,
             }
         );
-        assert_eq!(keys.data_holder.insert(key, Self::move_cursor_down), None);
+        assert_eq!(keys.data_holder.insert(key, Select::move_cursor_down), None);
         let key = event::Event::Key(
             event::KeyEvent{
                 code: event::KeyCode::Enter,
@@ -194,7 +184,7 @@ impl<'x, Type> Keys<Type, SelectKeysDS<'x, Type>, SelectActCtx<'x>, SelOk, ()> {
                 state: event::KeyEventState::NONE,
             }
         );
-        assert_eq!(keys.data_holder.insert(key, Self::exit), None);
+        assert_eq!(keys.data_holder.insert(key, Select::exit), None);
         let key = event::Event::Key(
             event::KeyEvent{
                 code: event::KeyCode::Char('q'),
@@ -203,7 +193,7 @@ impl<'x, Type> Keys<Type, SelectKeysDS<'x, Type>, SelectActCtx<'x>, SelOk, ()> {
                 state: event::KeyEventState::NONE,
             }
         );
-        assert_eq!(keys.data_holder.insert(key, Self::abort), None);
+        assert_eq!(keys.data_holder.insert(key, Select::abort), None);
         let key = event::Event::Key(
             event::KeyEvent{
                 code: event::KeyCode::Char('c'),
@@ -212,12 +202,13 @@ impl<'x, Type> Keys<Type, SelectKeysDS<'x, Type>, SelectActCtx<'x>, SelOk, ()> {
                 state: event::KeyEventState::NONE,
             }
         );
-        assert_eq!(keys.data_holder.insert(key, Self::abort), None);
+        assert_eq!(keys.data_holder.insert(key, Select::abort), None);
         keys
     }
     
 }
 
+/*
 impl<'x, Type, KeyType> Keys<Type, KeyType, SelectActCtx<'x>, SelOk, ()> {
     
     #[allow(dead_code)]
@@ -254,4 +245,4 @@ impl<'x, Type, KeyType> Keys<Type, KeyType, SelectActCtx<'x>, SelOk, ()> {
         Ok(SelOk::Abort)
     }
 }
-
+*/

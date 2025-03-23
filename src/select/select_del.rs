@@ -31,7 +31,7 @@ pub type PrintCtx = usize;
 pub type KeysDS<'a, Type> = HashMap<event::Event, KeyFunc<Type, ActCtx<'a>, SelOk, ()>>;
 
 //Options cant be updated in real time functions will block until the menu is completely clossed
-pub struct Select<'a, 'b, Type> {
+pub struct SelectDel<'a, 'b, Type> {
     index: usize,
     configs: Configs,
     keys: Keys<Type, KeysDS<'b, Type>, ActCtx<'a>, SelOk, ()>,
@@ -45,7 +45,7 @@ pub enum SelOk {
 }
 
 
-impl<'a, 'b, Type:std::fmt::Display> Select<'a, 'b, Type> {
+impl<'a, 'b, Type:std::fmt::Display> SelectDel<'a, 'b, Type> {
     
     pub fn new(keys: Keys<Type, KeysDS<'b, Type>, ActCtx<'a>, SelOk, ()>, configs:Configs, table_size:u16) -> Self {
         

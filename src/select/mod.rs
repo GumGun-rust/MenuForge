@@ -28,9 +28,9 @@ use derivative::Derivative;
 use super::compat::symbols;
 
 mod keys;
-//pub use keys::KeysMut;
 pub use keys::Keys;
 use keys::KeysTrait;
+use keys::KeysTraitMut;
 
 mod select;
 pub use select::Select;
@@ -48,7 +48,7 @@ const PRINTLINE_ERR:&'static str = "error in while flushing";
 
 //recomended to only modify the index field
 type KeyFunc<Type, ActCtx, RetOk, RetErr> = fn(&[Type], &mut ActCtx)->Result<RetOk, SelErr<RetErr>>;
-//type KeyFuncMut<Type, RetOk, RetErr> = fn(&mut Type, usize, &mut usize)->Result<RetOk, SelErr<RetErr>>;
+type KeyFuncMut<Type, ActCtx, RetOk, RetErr> = fn(&mut[Type], &mut ActCtx)->Result<RetOk, SelErr<RetErr>>;
 
 pub enum SelErr<RetErr> {
     BaseErr(IOError),
@@ -164,31 +164,23 @@ impl<Type, ActCtx, PrintCtx, RetOk, RetErr> RawSelect<Type, ActCtx, PrintCtx, Re
         poll(Duration::from_secs(0))
     }
     
-    /*
-    pub fn raw_prompt_mut(&mut self, keys:&KeysMut<Type, RetOk, RetErr>, list:&mut [Type]) -> RawSelResult<RetOk, SelErr<RetErr>> {
-        let key = match read().map_err(|err|SelErr::BaseErr(err)){
-            Ok(ok) => {ok}
-            Err(err) => {return RawSelResult::Err(err);}
-        };
-        let Self{
-            fields: Fields{
-                index,
-                ..
-            },
-            ..
-        }= self;
-        let len = list.len();
+    pub fn raw_prompt_mut<T:KeysTraitMut<Type, ActCtx, RetOk, RetErr>>(&mut self, keys:&mut T, list:&mut [Type], mut action_ctx:&mut ActCtx) -> RawSelResult<RetOk, SelErr<RetErr>> {
         
-        match keys.keys_get().get(&key) {
+        let key = match read() {
+            Ok(ok) => {ok}
+            Err(err) => {return RawSelResult::Err(SelErr::BaseErr(err));}
+        };
+        
+        match keys.get_key_action_mut(&mut action_ctx, &key) {
             Some(action) => {
-                match action(&mut list[*index], len, &mut self.fields.index) {
+                match action(list, &mut action_ctx) {
                     Ok(ok) => {RawSelResult::Ok(ok)}
                     Err(err) => {RawSelResult::Err(err)}
                 }
             }
-            None => {RawSelResult::KeyNotFound} }
+            None => {RawSelResult::KeyNotFound} 
+        }
     }
-    */
     
     pub fn raw_prompt<T:KeysTrait<Type, ActCtx, RetOk, RetErr>>(&mut self, keys:&mut T, list:&[Type], mut action_ctx:&mut ActCtx) -> RawSelResult<RetOk, SelErr<RetErr>> {
         
@@ -207,9 +199,6 @@ impl<Type, ActCtx, PrintCtx, RetOk, RetErr> RawSelect<Type, ActCtx, PrintCtx, Re
             None => {RawSelResult::KeyNotFound} 
         }
     }
-    
-    /* test I think you should have a way o telling that the key was not present. */
-    /*  */
     
     pub fn end_prompt(&mut self) -> Result<(), IOError> {
         if self.fields.bottom {
