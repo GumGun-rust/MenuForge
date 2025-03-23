@@ -72,14 +72,6 @@ struct Fields {
     init_position: Point2<u16>,
 }
 
-#[derive(Derivative, Debug)]
-#[derivative(Default)]
-pub struct Configs {
-    #[derivative(Default(value="true"))]
-    exit_on_new_key:bool,
-}
-
-
 #[derive(Default)]
 pub struct RawSelect<Type, ActCtx, PrintCtx, RetOk, RetErr> {
     configs: RawConfigs,

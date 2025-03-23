@@ -1,7 +1,6 @@
 use super::symbols;
 use super::Keys;
 use super::RawSelResult;
-use super::Configs;
 use super::RawConfigs;
 use super::RawSelect;
 use super::QUEUE_ERR;
@@ -23,6 +22,7 @@ use crossterm::terminal::Clear;
 use crossterm::terminal::ClearType;
 use crossterm::event;
 
+use derivative::Derivative;
 
 use const_format::formatcp;
 
@@ -37,6 +37,14 @@ pub struct Select<'a, 'b, Type> {
     keys: Keys<Type, KeysDS<'b, Type>, ActCtx<'a>, SelOk, ()>,
     inner: RawSelect<Type, ActCtx<'a>, usize, SelOk, ()>,
 }
+
+#[derive(Derivative, Debug)]
+#[derivative(Default)]
+pub struct Configs {
+    #[derivative(Default(value="true"))]
+    exit_on_new_key:bool,
+}
+
 
 pub enum SelOk {
     Ok,
@@ -65,7 +73,6 @@ impl<'a, 'b, Type:std::fmt::Display> Select<'a, 'b, Type> {
         
         self.inner.init_prompt()?;
         self.inner.print_line(list, *ctx.1, Self::print_func)?;
-        
         
         let ret = loop{
             match self.inner.raw_prompt(&mut self.keys, list, &mut ctx) {
@@ -96,10 +103,8 @@ impl<'a, 'b, Type:std::fmt::Display> Select<'a, 'b, Type> {
         Ok(ret)
     }
     
-    
     const UP_ARROW:&'static str = formatcp!(" {} ", symbols::UP_ARROW);
     const DOWN_ARROW:&'static str = formatcp!(" {} ", symbols::DOWN_ARROW);
-    
     
     fn print_func(line:u16, menu_size:u16, entries:&[Type], print_ctx:&mut PrintCtx) -> Result<(), IOError> {
         let index = *print_ctx;
