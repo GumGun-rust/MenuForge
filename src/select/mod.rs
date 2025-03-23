@@ -30,6 +30,7 @@ use super::compat::symbols;
 mod keys;
 //pub use keys::KeysMut;
 pub use keys::Keys;
+use keys::KeysTrait;
 
 mod select;
 pub use select::Select;
@@ -189,7 +190,7 @@ impl<Type, ActCtx, PrintCtx, RetOk, RetErr> RawSelect<Type, ActCtx, PrintCtx, Re
     }
     */
     
-    pub fn raw_prompt<T>(&mut self, keys:&mut Keys<Type, T, ActCtx, RetOk, RetErr>, list:&[Type], mut action_ctx:&mut ActCtx) -> RawSelResult<RetOk, SelErr<RetErr>> {
+    pub fn raw_prompt<T:KeysTrait<Type, ActCtx, RetOk, RetErr>>(&mut self, keys:&mut T, list:&[Type], mut action_ctx:&mut ActCtx) -> RawSelResult<RetOk, SelErr<RetErr>> {
         
         let key = match read() {
             Ok(ok) => {ok}

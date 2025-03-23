@@ -10,8 +10,11 @@ use std::collections::HashMap;
 
 use crossterm::event;
 
-use derivative::Derivative;
+pub trait KeysTrait<Type, ActCtx, RetOk, RetErr> {
+    fn get_key_action(&mut self, _:&mut ActCtx, _:&event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>>;
+}
 
+//use derivative::Derivative;
 /*
 #[derive(Derivative)]
 #[derivative(Default)]
@@ -112,14 +115,8 @@ impl<Type> KeysMut<Type, SelOk, ()> {
 //type KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr> = for<'a> fn(&'a mut KeyType, &'a mut ActCtx, event:&'a event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>>;
 type KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr> = fn(&mut KeyType, &mut ActCtx, &event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>>;
 
-//#[derive(Derivative)]
-//#[derivative(Default)]
 pub struct Keys<Type, KeyType, ActCtx, RetOk, RetErr> {
-    //#[derivative(Default(bound=""))]
-    //TODO: Change this field for a generic
-
     data_holder: KeyType, //HashMap<event::Event, KeyFunc<Type, ActCtx, RetOk, RetErr>>,
-    //function: KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr>,
     function: KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr>,
     pd_0: PhantomData<Type>,
     pd_1: PhantomData<KeyType>,
@@ -128,25 +125,24 @@ pub struct Keys<Type, KeyType, ActCtx, RetOk, RetErr> {
     pd_4: PhantomData<RetErr>,
 }
 
+impl<Type, KeyType, ActCtx, RetOk, RetErr> KeysTrait<Type, ActCtx, RetOk, RetErr> for Keys<Type, KeyType, ActCtx, RetOk, RetErr> {
+    fn get_key_action(&mut self, ctx:&mut ActCtx, event:&event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>> {
+        (self.function)(&mut self.data_holder, ctx, event)
+    }
+}
+    
 impl<Type, KeyType, ActCtx, RetOk, RetErr> Keys<Type, KeyType, ActCtx, RetOk, RetErr> {
     
-    //pub(super) fn new(b: KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr>) -> Self {
-    pub(super) fn new(data_holder:KeyType, b:for<'a> fn(&'a mut KeyType, &'a mut ActCtx, &'a event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>>) -> Self {
+    pub(super) fn new(data_holder:KeyType, fetch_cbk:KeyCbk<Type, KeyType, ActCtx, RetOk, RetErr>) -> Self {
         Self{
             data_holder: data_holder,
-            //keys: HashMap::default(),
-            function: b,
+            function: fetch_cbk,
             pd_0: PhantomData,
             pd_1: PhantomData,
             pd_2: PhantomData,
             pd_3: PhantomData,
             pd_4: PhantomData,
         }
-    }
-    
-    pub(super) fn get_key_action(&mut self, ctx:&mut ActCtx, event:&event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>> {
-        
-        (self.function)(&mut self.data_holder, ctx, event)
     }
 }
 
@@ -156,24 +152,22 @@ fn test_in<Type, KeyType, ActCtx, RetOk, RetErr>(holder:&mut KeyType, b:&mut Act
     panic!();
 }
 */
+/*
 fn test_in<'a, Type>(holder:&mut SelectKeysDS<'a, Type>, b:&mut SelectActCtx<'a>, c:&event::Event) -> Option<KeyFunc<Type, SelectActCtx<'a>, SelOk, ()>> {
     panic!();
 }
+*/
 
-impl<Type> Keys<Type, SelectKeysDS<'_, Type>, SelectActCtx<'_>, SelOk, ()> {
-    
+impl<'x, Type> Keys<Type, SelectKeysDS<'x, Type>, SelectActCtx<'x>, SelOk, ()> {
     //fn test_in<Type, KeyType, ActCtx, RetOk, RetErr>(holder:&mut KeyType, b:&mut ActCtx, c:&event::Event) -> Option<KeyFunc<Type, ActCtx, RetOk, RetErr>> {
-    fn test_in1<'a, 'b, 'c>(holder:&'a mut SelectKeysDS<'c, Type>, b:&'a mut SelectActCtx<'b>, c:&'a event::Event) -> Option<KeyFunc<Type, SelectActCtx<'b>, SelOk, ()>> {
-        
-        panic!();
+    fn function_cbk<'a, 'c>(data_holder:&'a mut SelectKeysDS<'c, Type>, _action_ctx:&'a mut SelectActCtx<'c>, event:&'a event::Event) -> Option<KeyFunc<Type, SelectActCtx<'c>, SelOk, ()>> {
+        data_holder.get(event).copied()
     }
-    
     
     pub fn default_keys() -> Self {
         
-        let mut keys = Self::new(HashMap::default(), Self::test_in1);
+        let mut keys = Self::new(HashMap::default(), Self::function_cbk);
         
-        //TODO: try a unit case where you save a partial specific function from a generic function to see how it needs to be casted
         let key = event::Event::Key(
             event::KeyEvent{
                 code: event::KeyCode::Char('k'),
@@ -221,6 +215,10 @@ impl<Type> Keys<Type, SelectKeysDS<'_, Type>, SelectActCtx<'_>, SelOk, ()> {
         assert_eq!(keys.data_holder.insert(key, Self::abort), None);
         keys
     }
+    
+}
+
+impl<'x, Type, KeyType> Keys<Type, KeyType, SelectActCtx<'x>, SelOk, ()> {
     
     #[allow(dead_code)]
     fn exit(_:&[Type], ctx:&mut SelectActCtx) -> Result<SelOk, SelErr<()>> {
