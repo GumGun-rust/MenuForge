@@ -75,14 +75,14 @@ impl<'a, 'b, Type:std::fmt::Display> Select<'a, 'b, Type> {
         let mut ctx:ActCtx = (list.len(), &mut self.index);
         
         self.inner.init_prompt()?;
-        self.inner.print_line(list, *ctx.1, Self::print_func)?;
+        self.inner.print_buffer(list, *ctx.1, Self::print_func)?;
         
         let ret = loop{
             match self.inner.raw_prompt(&mut self.keys, list, &mut ctx) {
                 RawSelResult::Ok(ok) => {
                     match ok {
                         SelOk::Ok => {
-                            self.inner.print_line(list, *ctx.1, Self::print_func).expect(PRINTLINE_ERR);
+                            self.inner.print_buffer(list, *ctx.1, Self::print_func).expect(PRINTLINE_ERR);
                         }
                         SelOk::Exit(ret) => {
                             break Some(ret);

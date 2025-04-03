@@ -8,6 +8,7 @@ pub use select::SelConf;
 //pub use select::SelectNonBlock;
 pub use select::RawSelect;
 pub use select::RawConfigs;
+pub use select::RawSelResult;
 pub use select::KeysTrait;
 pub use select::KeyFunc;
 pub use select::SelErr;

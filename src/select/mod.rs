@@ -207,7 +207,7 @@ impl<Type, ActCtx, PrintCtx, RetOk, RetErr> RawSelect<Type, ActCtx, PrintCtx, Re
         disable_raw_mode()
     }
     
-    pub fn print_line(&mut self, entries:&[Type], mut modi:PrintCtx, print_callback:fn(u16, u16, &[Type], &mut PrintCtx)->Result<(), IOError>) -> Result<(), IOError> {
+    pub fn print_buffer(&mut self, entries:&[Type], mut modi:PrintCtx, print_callback:fn(u16, u16, &[Type], &mut PrintCtx)->Result<(), IOError>) -> Result<(), IOError> {
         let Self{
             fields: Fields{
                 init_position,
