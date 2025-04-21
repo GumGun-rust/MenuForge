@@ -23,7 +23,6 @@ use crossterm::terminal::Clear;
 use crossterm::terminal::ClearType;
 use crossterm::event;
 
-use derivative::Derivative;
 
 use const_format::formatcp;
 
@@ -34,16 +33,8 @@ pub type KeysDS<'a, Type> = HashMap<event::Event, KeyFunc<Type, ActCtx<'a>, SelO
 //Options cant be updated in real time functions will block until the menu is completely clossed
 pub struct Select<'a, 'b, Type> {
     index: usize,
-    configs: Configs,
     keys: Keys<Type, KeysDS<'b, Type>, ActCtx<'a>, SelOk, ()>,
     inner: RawSelect<Type, ActCtx<'a>, usize, SelOk, ()>,
-}
-
-#[derive(Derivative, Debug)]
-#[derivative(Default)]
-pub struct Configs {
-    #[derivative(Default(value="true"))]
-    exit_on_new_key:bool,
 }
 
 
@@ -58,14 +49,13 @@ impl<'a, 'b, Type:Display> Select<'a, 'b, Type> {
     const UP_ARROW:&'static str = formatcp!(" {} ", symbols::UP_ARROW);
     const DOWN_ARROW:&'static str = formatcp!(" {} ", symbols::DOWN_ARROW);
     
-    pub fn new(keys: Keys<Type, KeysDS<'b, Type>, ActCtx<'a>, SelOk, ()>, configs:Configs, table_size:u16) -> Self {
+    pub fn new(keys: Keys<Type, KeysDS<'b, Type>, ActCtx<'a>, SelOk, ()>, table_size:u16) -> Self {
         
         let mut config_holder = RawConfigs::default();
         config_holder.table_size = table_size;
         
         Self{
             index: 0,
-            configs,
             keys, 
             inner:RawSelect::<Type, ActCtx<'a>, usize, SelOk, ()>::new(config_holder)
         }
@@ -96,9 +86,7 @@ impl<'a, 'b, Type:Display> Select<'a, 'b, Type> {
                     break None;
                 }
                 RawSelResult::KeyNotFound => {
-                    if self.configs.exit_on_new_key {
-                        break None;
-                    }
+                    break None;
                 }
             }
         };

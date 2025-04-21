@@ -30,12 +30,11 @@ use super::compat::symbols;
 mod keys;
 pub use keys::Keys;
 pub use keys::KeysTrait;
-use keys::KeysTraitMut;
+//use keys::KeysTraitMut;
 
 mod select;
 pub use select::Select;
 pub use select::SelOk;
-pub use select::Configs as SelConf;
 pub use select::ActCtx as SelectActCtx;
 pub use select::KeysDS as SelectKeysDS;
 
@@ -50,7 +49,8 @@ const PRINTLINE_ERR:&'static str = "error in while flushing";
 //recomended to only modify the index field
 //TODO: check the public level of this
 pub type KeyFunc<Type, ActCtx, RetOk, RetErr> = fn(&[Type], &mut ActCtx)->Result<RetOk, SelErr<RetErr>>;
-type KeyFuncMut<Type, ActCtx, RetOk, RetErr> = fn(&mut[Type], &mut ActCtx)->Result<RetOk, SelErr<RetErr>>;
+
+//type KeyFuncMut<Type, ActCtx, RetOk, RetErr> = fn(&mut[Type], &mut ActCtx)->Result<RetOk, SelErr<RetErr>>;
 
 pub enum SelErr<RetErr> {
     BaseErr(IOError),
@@ -156,6 +156,7 @@ impl<Type, ActCtx, PrintCtx, RetOk, RetErr> RawSelect<Type, ActCtx, PrintCtx, Re
         poll(Duration::from_secs(0))
     }
     
+    /*
     pub fn raw_prompt_mut<T:KeysTraitMut<Type, ActCtx, RetOk, RetErr>>(&mut self, keys:&mut T, list:&mut [Type], mut action_ctx:&mut ActCtx) -> RawSelResult<RetOk, SelErr<RetErr>> {
         
         let key = match read() {
@@ -173,6 +174,7 @@ impl<Type, ActCtx, PrintCtx, RetOk, RetErr> RawSelect<Type, ActCtx, PrintCtx, Re
             None => {RawSelResult::KeyNotFound} 
         }
     }
+    */
     
     pub fn raw_prompt<T:KeysTrait<Type, ActCtx, RetOk, RetErr>>(&mut self, keys:&mut T, list:&[Type], mut action_ctx:&mut ActCtx) -> RawSelResult<RetOk, SelErr<RetErr>> {
         

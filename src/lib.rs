@@ -3,9 +3,7 @@ mod compat;
 mod keys;
 
 pub use select::Select;
-pub use select::SelConf;
 
-//pub use select::SelectNonBlock;
 pub use select::RawSelect;
 pub use select::RawConfigs;
 pub use select::RawSelResult;
