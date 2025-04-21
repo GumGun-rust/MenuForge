@@ -26,6 +26,8 @@ use crossterm::terminal::ClearType;
 const QUEUE_ERR:&'static str = "MOVE STRING";
 const GRANTED_ERR:&'static str = "MOVE STRING";
 
+struct MenuWraper<'a, T>(&'a T);
+
 
 pub type ListType = String;
 pub type RetOk = RetOkEnum;

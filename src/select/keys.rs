@@ -5,6 +5,7 @@ use super::KeyFunc;
 use super::SelectActCtx;
 use super::SelectKeysDS;
 
+use std::fmt::Display;
 use std::marker::PhantomData;
 use std::collections::HashMap;
 
@@ -149,7 +150,7 @@ impl<Type, KeyType, ActCtx, RetOk, RetErr> Keys<Type, KeyType, ActCtx, RetOk, Re
     }
 }
 
-impl<'x, Type:std::fmt::Display> Keys<Type, SelectKeysDS<'x, Type>, SelectActCtx<'x>, SelOk, ()> {
+impl<'x, Type:Display> Keys<Type, SelectKeysDS<'x, Type>, SelectActCtx<'x>, SelOk, ()> {
     
     fn function_cbk<'a, 'c>(data_holder:&'a mut SelectKeysDS<'c, Type>, _action_ctx:&'a mut SelectActCtx<'c>, event:&'a event::Event) -> Option<KeyFunc<Type, SelectActCtx<'c>, SelOk, ()>> {
         data_holder.get(event).copied()

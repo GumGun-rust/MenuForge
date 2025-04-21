@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
-use std::io::Error as IOError;
 use std::time::Duration;
 
 use std::io::Write;
 use std::io::stdout;
+use std::io::Error as IOError;
 
 use crossterm::queue; 
 use crossterm::event::read;

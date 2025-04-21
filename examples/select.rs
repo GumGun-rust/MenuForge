@@ -1,4 +1,3 @@
-
 fn main() {
     let keys = menuforge::Select::gen_default_keys();
     let configs = menuforge::SelConf::default();

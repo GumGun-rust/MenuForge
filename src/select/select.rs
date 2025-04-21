@@ -10,6 +10,7 @@ use super::SelErr;
 
 use std::io::Error as IOError;
 use std::io::stdout;
+use std::fmt::Display;
 use std::collections::HashMap;
 
 use crossterm::queue; 
@@ -52,8 +53,7 @@ pub enum SelOk {
     Abort,
 }
 
-
-impl<'a, 'b, Type:std::fmt::Display> Select<'a, 'b, Type> {
+impl<'a, 'b, Type:Display> Select<'a, 'b, Type> {
     
     const UP_ARROW:&'static str = formatcp!(" {} ", symbols::UP_ARROW);
     const DOWN_ARROW:&'static str = formatcp!(" {} ", symbols::DOWN_ARROW);
