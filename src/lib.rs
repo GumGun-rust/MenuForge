@@ -2,30 +2,24 @@ mod select;
 mod compat;
 mod keys;
 
-pub use select::Select;
-
-pub use select::RawSelect;
-pub use select::RawConfigs;
-pub use select::RawSelResult;
-pub use select::KeysTrait;
-pub use select::KeyFunc;
-pub use select::SelErr;
+/* re exports */
 pub use crossterm;
 
+pub use select::Select;
+pub use select::SelErr;
+pub use select::KeysTrait;
+pub use select::KeyFunc;
 
-/*
-fn add(left: u64, right: u64) -> u64 {
-    left + right
+
+#[cfg(feature = "raw")]
+pub use raw_export::*;
+
+#[cfg(feature = "raw")]
+mod raw_export {
+    use super::select;
+
+    pub use select::RawSelect;
+    pub use select::RawConfigs;
+    pub use select::RawSelResult;
 }
 
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
-*/

@@ -152,6 +152,7 @@ impl<Type, ActCtx, PrintCtx, RetOk, RetErr> RawSelect<Type, ActCtx, PrintCtx, Re
         Ok(())
     }
     
+    #[allow(dead_code)] //disable waring if feature is not enabled
     pub fn poll(&self) -> Result<bool, IOError> {
         poll(Duration::from_secs(0))
     }
