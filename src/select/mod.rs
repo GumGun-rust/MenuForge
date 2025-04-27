@@ -34,14 +34,10 @@ pub use keys::KeysTrait;
 
 mod select;
 pub use select::Select;
-pub use select::SelOk;
+pub use select::SelOk as SelectOk;
 pub use select::ActCtx as SelectActCtx;
 pub use select::KeysDS as SelectKeysDS;
 
-/*
-mod non_block;
-pub use non_block::SelectNonBlock;
-*/
 
 const QUEUE_ERR:&'static str = "error in while setting stdout queue";
 const PRINTLINE_ERR:&'static str = "error in while flushing";
@@ -92,9 +88,6 @@ pub struct RawConfigs {
 
 
 impl<Type, ActCtx, PrintCtx, RetOk, RetErr> RawSelect<Type, ActCtx, PrintCtx, RetOk, RetErr> {
-    
-    //type PrintCbk = fn(u16, u16, &[Type], &mut PrintCtx)->Result<(), IOError>; 
-    /* Inherent Associated types are unstable */
     
     pub fn new(configs: RawConfigs) -> Self {
         Self{

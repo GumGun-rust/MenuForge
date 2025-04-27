@@ -1,6 +1,7 @@
-use super::SelOk;
-use super::Select;
 use super::KeyFunc;
+
+use super::SelectOk;
+use super::Select;
 use super::SelectActCtx;
 use super::SelectKeysDS;
 
@@ -54,9 +55,9 @@ impl<Type, KeyType, ActCtx, RetOk, RetErr> Keys<Type, KeyType, ActCtx, RetOk, Re
 }
 
 
-impl<'x, Type:Display> Keys<Type, SelectKeysDS<'x, Type>, SelectActCtx<'x>, SelOk, ()> {
+impl<'x, Type:Display> Keys<Type, SelectKeysDS<'x, Type>, SelectActCtx<'x>, SelectOk, ()> {
     
-    fn function_cbk<'a, 'c>(data_holder:&'a mut SelectKeysDS<'c, Type>, _action_ctx:&'a mut SelectActCtx<'c>, event:&'a event::Event) -> Option<KeyFunc<Type, SelectActCtx<'c>, SelOk, ()>> {
+    fn function_cbk<'a, 'c>(data_holder:&'a mut SelectKeysDS<'c, Type>, _action_ctx:&'a mut SelectActCtx<'c>, event:&'a event::Event) -> Option<KeyFunc<Type, SelectActCtx<'c>, SelectOk, ()>> {
         data_holder.get(event).copied()
     }
     
